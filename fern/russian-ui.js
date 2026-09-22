@@ -1,6 +1,4 @@
 (() => {
-  document.documentElement.lang = "ru";
-
   const translations = new Map([
     ["Search", "Поиск"],
     ["Search documentation", "Поиск по документации"],
@@ -95,6 +93,7 @@
   };
 
   const start = () => {
+    document.documentElement.lang = "ru";
     translateTree(document.body);
 
     new MutationObserver((records) => {
@@ -106,7 +105,7 @@
   };
 
   const startAfterHydration = () => {
-    requestAnimationFrame(() => requestAnimationFrame(start));
+    window.setTimeout(start, 2000);
   };
 
   if (document.readyState === "complete") {

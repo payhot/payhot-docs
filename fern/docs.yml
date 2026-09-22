@@ -7,6 +7,18 @@ instances:
 title: PayHot API
 default-language: curl
 
+typography:
+  headingsFont:
+    name: Onest
+    path: docs/assets/Onest-Variable.ttf
+    weight: "100 900"
+    style: normal
+  bodyFont:
+    name: Onest
+    path: docs/assets/Onest-Variable.ttf
+    weight: "100 900"
+    style: normal
+
 layout:
   searchbar-placement: header
   page-width: full

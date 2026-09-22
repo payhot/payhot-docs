@@ -1,11 +1,3 @@
-@font-face {
-  font-family: "Onest";
-  src: url("./docs/assets/Onest-Variable.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 :root {
   --font-body: "Onest", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Onest", ui-sans-serif, system-ui, sans-serif;
@@ -165,7 +157,7 @@ pre {
 }
 
 #fern-ask-ai-button {
-  min-width: 8.35rem;
+  min-width: 8.35rem !important;
   color: #ffffff !important;
   background: var(--ph-brand) !important;
   border-color: var(--ph-brand) !important;
@@ -185,7 +177,7 @@ pre {
 }
 
 [id^="playground-button:"] {
-  min-width: 6.8rem;
+  min-width: 6.8rem !important;
   color: #ffffff !important;
   background: var(--ph-brand) !important;
   box-shadow: 0 6px 16px rgb(246 24 51 / 24%);
@@ -255,7 +247,7 @@ pre {
 }
 
 .fern-docs-badge[data-badge-type="availability"] {
-  min-width: 5.25rem;
+  min-width: 5.25rem !important;
   color: #ffffff !important;
   background: var(--ph-brand) !important;
   border-color: transparent !important;
