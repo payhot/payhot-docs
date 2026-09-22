@@ -366,7 +366,7 @@ paths:
                 $ref: '#/components/schemas/MerchantRecurringEnrollmentGrant'
               examples:
                 card:
-                  summary: Ссылка для привязки карты
+                  summary: Привязка карты
                   value:
                     recurring_enrollment:
                       status: processing
@@ -376,7 +376,7 @@ paths:
                       expires_at: '2026-09-22T18:30:00Z'
                     checkout_url: /pay/75555555-5555-4555-8555-555555555555#token=phc_v2.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                 sbp:
-                  summary: Ссылка для привязки СБП
+                  summary: Привязка СБП
                   value:
                     recurring_enrollment:
                       status: processing
