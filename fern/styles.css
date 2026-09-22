@@ -165,6 +165,7 @@ pre {
 }
 
 #fern-ask-ai-button {
+  min-width: 8.35rem;
   color: #ffffff !important;
   background: var(--ph-brand) !important;
   border-color: var(--ph-brand) !important;
@@ -184,6 +185,7 @@ pre {
 }
 
 [id^="playground-button:"] {
+  min-width: 6.8rem;
   color: #ffffff !important;
   background: var(--ph-brand) !important;
   box-shadow: 0 6px 16px rgb(246 24 51 / 24%);
@@ -253,6 +255,7 @@ pre {
 }
 
 .fern-docs-badge[data-badge-type="availability"] {
+  min-width: 5.25rem;
   color: #ffffff !important;
   background: var(--ph-brand) !important;
   border-color: transparent !important;
