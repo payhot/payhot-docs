@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://schema.buildwithfern.dev/docs-yml.json
+
+instances:
+  - url: paypal-160815.docs.buildwithfern.com
+    custom-domain: docs.pay.hot
+
+title: PayHot API
+
+layout:
+  searchbar-placement: header
+  page-width: full
+  tabs-placement: header
+
+tabs:
+  guides:
+    display-name: Руководство
+    icon: book-open
+  api-reference:
+    display-name: API
+    icon: code
+
+navigation:
+  - tab: guides
+    layout:
+      - section: Начало работы
+        contents:
+          - page: Обзор
+            path: docs/pages/overview.mdx
+            icon: house
+          - page: Первый платёж
+            path: docs/pages/first-payment.mdx
+            icon: play
+          - page: Выплаты
+            path: docs/pages/payouts.mdx
+            icon: paper-plane-tilt
+          - page: Повторные платежи
+            path: docs/pages/recurring.mdx
+            icon: arrows-clockwise
+          - page: Ошибки и повторы
+            path: docs/pages/errors-and-retries.mdx
+            icon: warning-circle
+          - page: Поддержка
+            path: docs/pages/support.mdx
+            icon: headset
+  - tab: api-reference
+    layout:
+      - api: Справочник API
+        paginated: true
+        tag-description-pages: true
+        display-errors: true
+
+navbar-links:
+  - type: minimal
+    text: Кабинет
+    url: https://app.pay.hot
+  - type: filled
+    text: Поддержка
+    url: https://t.me/payhotsupport_bot
+
+colors:
+  accent-primary:
+    dark: "#FD2226"
+    light: "#EC0A46"
+  background:
+    dark: "#111216"
+    light: "#F3F7FC"
+
+theme:
+  page-actions: toolbar
+  footer-nav: minimal
+
+logo:
+  dark: docs/assets/logo.svg
+  light: docs/assets/logo.svg
+  height: 27
+  href: https://pay.hot
+
+favicon: docs/assets/favicon.svg
+css: styles.css
+
+metadata:
+  og:dynamic: true

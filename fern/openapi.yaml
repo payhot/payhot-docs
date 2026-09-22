@@ -1,0 +1,1797 @@
+openapi: 3.1.0
+info:
+  title: PayHot API
+  version: 2.0.0
+  description: Публичный API PayHot для платежей, выплат, повторных списаний и получения баланса проекта.
+servers:
+- url: https://app.pay.hot
+  x-fern-server-name: Production
+tags:
+- name: Платежи
+  description: Создание платежей и проверка их состояния.
+- name: Выплаты
+  description: Создание выплат и проверка их состояния.
+- name: Повторные платежи
+  description: Привязка способа оплаты и повторные списания.
+- name: Балансы
+  description: Баланс проекта.
+paths:
+  /api/v2/payments:
+    post:
+      operationId: createPayment
+      summary: Создать платёж
+      description: Создаёт платёж и одноразовую ссылку Checkout PayHot. Касса определяется API-ключом. Повтор с тем же Idempotency-Key
+        возвращает результат исходного запроса.
+      tags:
+      - Платежи
+      security:
+      - MerchantBearer: []
+      parameters:
+      - $ref: '#/components/parameters/StrongIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+            examples:
+              sbpRUB:
+                summary: 100 RUB через СБП
+                value:
+                  merchant_order_reference: order-sbp-1
+                  amount_minor: '10000'
+                  currency: RUB
+                  payment_method: sbp
+              cardRUB:
+                summary: 100 RUB по карте
+                value:
+                  merchant_order_reference: order-card-1
+                  amount_minor: '10000'
+                  currency: RUB
+                  payment_method: card
+              cardEUR:
+                summary: 10 EUR по карте
+                value:
+                  merchant_order_reference: order-card-eur-1
+                  amount_minor: '1000'
+                  currency: EUR
+                  payment_method: card
+              sberPayRUB:
+                summary: 100 RUB через SberPay
+                value:
+                  merchant_order_reference: order-sberpay-1
+                  amount_minor: '10000'
+                  currency: RUB
+                  payment_method: sberpay
+                  customer:
+                    id: customer-4
+                    phone: '+79991234567'
+                    sberpay:
+                      front_type: back2app
+              rubCryptoPayerSelects:
+                summary: Сумма в RUB, выбор криптовалюты плательщиком
+                value:
+                  merchant_order_reference: order-rub-crypto-1
+                  amount_minor: '10000'
+                  currency: RUB
+                  payment_method: crypto
+              rubCryptoNetworkLocked:
+                summary: Сумма в RUB, сеть TRON задана
+                value:
+                  merchant_order_reference: order-rub-crypto-2
+                  amount_minor: '10000'
+                  currency: RUB
+                  payment_method: crypto
+                  crypto:
+                    network: TRON
+              exactUSDT:
+                summary: Точная сумма USDT в сети TRON
+                value:
+                  merchant_order_reference: order-usdt-1
+                  amount_minor: '10000000'
+                  currency: USDT.TRON
+                  payment_method: crypto
+      responses:
+        '201':
+          description: Платёж создан или безопасно возвращён результат повтора.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+            Idempotency-Replayed:
+              description: Присутствует только при повторе запроса.
+              schema:
+                type: string
+                enum:
+                - 'true'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/PaymentCheckoutGrant'
+                - $ref: '#/components/schemas/PaymentReplay'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '415':
+          $ref: '#/components/responses/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/payments/{payment_id}:
+    parameters:
+    - $ref: '#/components/parameters/PaymentID'
+    get:
+      operationId: getPayment
+      summary: Получить статус платежа
+      description: Возвращает текущее состояние платежа, созданного для проекта и кассы этого API-ключа. Итог подтверждайте
+        статусом или подписанным вебхуком.
+      tags:
+      - Платежи
+      security:
+      - MerchantBearer: []
+      responses:
+        '200':
+          description: Запрос выполнен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/payments/{payment_id}/direct-sbp-action:
+    parameters:
+    - $ref: '#/components/parameters/PaymentID'
+    get:
+      operationId: getDirectSBPAction
+      summary: Получить прямую ссылку СБП
+      description: Для уже созданного платежа СБП возвращает состояние прямой QR-ссылки. Разрешение включает администратор
+        PayHot для конкретного боевого API-ключа и кассы. hosted_checkout_required означает переход через Checkout PayHot,
+        pending — ссылку ещё готовят, available — ссылка готова до expires_at, expired — срок истёк. available не подтверждает
+        оплату; итог проверяйте по статусу платежа или вебхуку.
+      tags:
+      - Платежи
+      security:
+      - MerchantBearer: []
+      responses:
+        '200':
+          description: Текущее состояние прямой ссылки СБП. Ответ не подтверждает оплату.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectSBPActionEnvelope'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/payments/{payment_id}/refunds:
+    parameters:
+    - $ref: '#/components/parameters/PaymentLifecyclePaymentID'
+    post:
+      operationId: refundPayment
+      summary: Возврат платежа
+      deprecated: true
+      description: Создание возврата через API мерчанта пока недоступно. Возврат средств выполняется через менеджеров PayHot.
+        Адрес возвращает 403 без создания операции.
+      tags:
+      - Платежи
+      security:
+      - MerchantBearer: []
+      parameters:
+      - $ref: '#/components/parameters/StrongIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentLifecycleAmountRequest'
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '415':
+          $ref: '#/components/responses/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/PaymentLifecycleUnprocessableError'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/payouts:
+    post:
+      operationId: createPayout
+      summary: Выплаты
+      description: Создаёт выплату с рублёвого баланса проекта. Сумма указывается в копейках RUB, реквизиты карты или СБП
+        передаются только в этом запросе. Криптовалютные выплаты пока недоступны. Повторяйте запрос с тем же Idempotency-Key.
+      tags:
+      - Выплаты
+      security:
+      - MerchantBearer: []
+      parameters:
+      - $ref: '#/components/parameters/StrongIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerPayoutRequest'
+            examples:
+              card:
+                summary: Выплата на карту
+                value:
+                  merchant_payout_reference: payout-1001
+                  amount_minor: '12000'
+                  currency: RUB
+                  recipient:
+                    method: card
+                    card_number: '4111111111111111'
+                    first_name: Иван
+                    last_name: Иванов
+                    email: ivan@example.com
+                    payeer_identifier: recipient-1001
+              sbp:
+                summary: Выплата через СБП
+                value:
+                  merchant_payout_reference: payout-1002
+                  amount_minor: '12000'
+                  currency: RUB
+                  recipient:
+                    method: sbp
+                    phone: '+79991234567'
+                    bank_id: '100000000001'
+                    card_holder: Иван Иванов
+                    payeer_identifier: recipient-1002
+      responses:
+        '201':
+          description: Выплата создана или безопасно возвращён результат повтора.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+            Idempotency-Replayed:
+              description: Присутствует только при повторе запроса.
+              schema:
+                type: string
+                enum:
+                - 'true'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/PayoutCreationConflictError'
+        '415':
+          $ref: '#/components/responses/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/payouts/{payout_id}:
+    parameters:
+    - $ref: '#/components/parameters/PayoutID'
+    get:
+      operationId: getPayout
+      summary: Получить статус выплаты
+      description: Показывает состояние выплаты проекта без полного номера карты и других реквизитов получателя.
+      tags:
+      - Выплаты
+      security:
+      - MerchantBearer: []
+      responses:
+        '200':
+          description: Текущее состояние выплаты проекта.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/recurring-enrollment-sessions:
+    post:
+      operationId: createRecurringEnrollmentSession
+      summary: Привязать карту или СБП
+      description: Создаёт защищённую ссылку PayHot для привязки карты или СБП. Передайте ссылку плательщику; после успешного
+        подтверждения PayHot активирует бессрочное разрешение и вернёт mandate_id. Привязка действует до отзыва. Внутренний
+        сценарий работы с провайдером выбирает PayHot.
+      tags:
+      - Повторные платежи
+      security:
+      - MerchantBearer: []
+      parameters:
+      - $ref: '#/components/parameters/StrongIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecurringEnrollmentRequest'
+            examples:
+              card:
+                summary: Привязка карты
+                value:
+                  payment_method: card
+                  merchant_mandate_reference: subscription-1001
+                  customer_reference: customer-1001
+              sbp:
+                summary: Привязка СБП
+                value:
+                  payment_method: sbp
+                  merchant_mandate_reference: subscription-1002
+                  customer_reference: customer-1002
+      responses:
+        '201':
+          description: Создана ссылка для подтверждения привязки карты или СБП.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantRecurringEnrollmentGrant'
+              examples:
+                card:
+                  summary: Ссылка для привязки карты
+                  value:
+                    recurring_enrollment:
+                      status: processing
+                      currency: RUB
+                      payment_method: card
+                      merchant_mandate_reference: subscription-1001
+                      expires_at: '2026-09-22T18:30:00Z'
+                    checkout_url: /pay/75555555-5555-4555-8555-555555555555#token=phc_v2.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                sbp:
+                  summary: Ссылка для привязки СБП
+                  value:
+                    recurring_enrollment:
+                      status: processing
+                      currency: RUB
+                      payment_method: sbp
+                      merchant_mandate_reference: subscription-1002
+                      expires_at: '2026-09-22T18:30:00Z'
+                    checkout_url: /mandate/76666666-6666-4666-8666-666666666666#token=phc_v2.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '415':
+          $ref: '#/components/responses/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/mandates/{mandate_id}:
+    parameters:
+    - $ref: '#/components/parameters/MandateID'
+    get:
+      operationId: getMandate
+      summary: Получить статус привязки
+      description: Показывает состояние разрешения на повторные списания по проекту. Полные реквизиты плательщика не возвращаются.
+      tags:
+      - Повторные платежи
+      security:
+      - MerchantBearer: []
+      responses:
+        '200':
+          description: Текущее состояние привязки.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MandateEnvelope'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/mandates/{mandate_id}/revoke:
+    parameters:
+    - $ref: '#/components/parameters/MandateID'
+    post:
+      operationId: revokeMandate
+      summary: Отключить повторные списания
+      description: Отзывает разрешение плательщика на будущие списания. Повтор с тем же запросом безопасен.
+      tags:
+      - Повторные платежи
+      security:
+      - MerchantBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeMandateRequest'
+      responses:
+        '200':
+          description: Повторные списания отключены.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeMandateResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '415':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/recurring-charges:
+    post:
+      operationId: createRecurringCharge
+      summary: Создать повторное списание
+      description: Принимает одно списание по действующему разрешению плательщика. Ответ 202 означает постановку в обработку,
+        а не успешную оплату; итог проверяйте отдельно.
+      tags:
+      - Повторные платежи
+      security:
+      - MerchantBearer: []
+      parameters:
+      - $ref: '#/components/parameters/StrongIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecurringChargeRequest'
+      responses:
+        '202':
+          description: Списание принято в обработку. Итог проверяйте по статусу и вебхуку.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+            Idempotency-Replayed:
+              description: Присутствует только при повторе запроса.
+              schema:
+                type: string
+                enum:
+                - 'true'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringChargeEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '415':
+          $ref: '#/components/responses/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/recurring-charges/{charge_id}:
+    parameters:
+    - $ref: '#/components/parameters/RecurringChargeID'
+    get:
+      operationId: getRecurringCharge
+      summary: Получить повторное списание
+      tags:
+      - Повторные платежи
+      security:
+      - MerchantBearer: []
+      responses:
+        '200':
+          description: Текущее состояние повторного списания.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringChargeEnvelope'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+      description: Возвращает текущее состояние списания по разрешению плательщика в этом проекте.
+  /api/v2/payments/export:
+    get:
+      operationId: exportMerchantAPIPayments
+      summary: Выгрузить платежи
+      description: Выгружает платежи проекта за период до 31 дня в CSV, Excel или JSON. Максимум 10 000 строк.
+      tags:
+      - Платежи
+      security:
+      - MerchantBearer: []
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - csv
+          - xlsx
+          - json
+      responses:
+        '200':
+          description: Запрос выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MerchantPaymentExportRow'
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+  /api/v2/balances:
+    get:
+      operationId: listMerchantAPIBalances
+      summary: Получить баланс
+      description: Возвращает доступный, удержанный и резервный баланс проекта, к которому привязан API-ключ. Суммы указаны
+        в минимальных единицах каждой валюты.
+      tags:
+      - Балансы
+      security:
+      - MerchantBearer: []
+      responses:
+        '200':
+          description: Запрос выполнен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantBalancePage'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/MerchantAuthenticationError'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/RetryableError'
+components:
+  securitySchemes:
+    MerchantBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: phk_v2
+      description: API-ключ проекта. Сессия кабинета для этого метода не подходит.
+  parameters:
+    StrongIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Уникальный ключ операции от 16 до 128 печатных символов ASCII. При повторе используйте то же значение.
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: ^[!-~]{16,128}$
+    PaymentID:
+      name: payment_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    PaymentLifecyclePaymentID:
+      name: payment_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/LowercaseUUID'
+    PayoutID:
+      name: payout_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    MandateID:
+      name: mandate_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    RecurringChargeID:
+      name: charge_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - merchant_order_reference
+      - amount_minor
+      - currency
+      - payment_method
+      allOf:
+      - $ref: '#/components/schemas/PaymentPayinCombination'
+      properties:
+        recurring_enrollment:
+          type: object
+          additionalProperties: false
+          description: 'Прежний способ запросить привязку карты вместе с платежом. Для новой интеграции используйте отдельный
+            метод привязки карты или СБП: PayHot сам выберет внутренний сценарий и вернёт ссылку подтверждения.'
+          properties: {}
+        customer:
+          type: object
+          additionalProperties: false
+          required:
+          - id
+          description: Данные плательщика. Передавайте только поля, нужные для выбранного способа оплаты. Если для привязки
+            карты нужен email, плательщик может ввести его в Checkout.
+          properties:
+            id:
+              type: string
+              minLength: 1
+              maxLength: 128
+              pattern: ^[\x21-\x7e]+$
+            email:
+              type: string
+              format: email
+              maxLength: 320
+            phone:
+              type: string
+              maxLength: 32
+              description: Фактический номер телефона плательщика. Для SberPay передавайте номер, которым пользуется плательщик.
+            ip:
+              type: string
+              maxLength: 45
+              description: Фактический IPv4 или IPv6 плательщика без порта. Не передавайте адрес сервера мерчанта.
+            name:
+              type: string
+              maxLength: 160
+            telegram:
+              type: string
+              maxLength: 33
+            sberpay:
+              type: object
+              additionalProperties: false
+              description: Поля SberPay. Для перехода в приложение нужен телефон плательщика; тип интерфейса определяет способ
+                открытия банка.
+              required:
+              - front_type
+              properties:
+                front_type:
+                  type: string
+                  enum:
+                  - back2app
+                  - app2app
+                os_type:
+                  type: string
+                  enum:
+                  - ios
+                  - android
+        merchant_order_reference:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Уникальный номер заказа в вашей системе. Пробелы в начале и конце недопустимы.
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        currency:
+          $ref: '#/components/schemas/MvpMoneyUnit'
+        payment_method:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: ^[a-z][a-z0-9_.-]{1,63}$
+        crypto:
+          $ref: '#/components/schemas/PaymentCryptoPreference'
+    PaymentCheckoutGrant:
+      type: object
+      additionalProperties: false
+      required:
+      - payment
+      - checkout
+      properties:
+        payment:
+          $ref: '#/components/schemas/Payment'
+        checkout:
+          $ref: '#/components/schemas/CheckoutSessionGrantWithToken'
+    PaymentReplay:
+      type: object
+      additionalProperties: false
+      required:
+      - payment
+      - checkout
+      properties:
+        payment:
+          $ref: '#/components/schemas/Payment'
+        checkout:
+          $ref: '#/components/schemas/CheckoutSessionReplay'
+    PaymentEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - payment
+      properties:
+        payment:
+          $ref: '#/components/schemas/Payment'
+    DirectSBPActionEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - direct_sbp
+      properties:
+        direct_sbp:
+          $ref: '#/components/schemas/DirectSBPAction'
+    PaymentLifecycleAmountRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - amount_minor
+      properties:
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+    CreateCustomerPayoutRequest:
+      type: object
+      description: Создание выплаты с рублёвого баланса проекта. amount_minor — сумма RUB в копейках. Сейчас доступны только
+        карта и СБП; криптовалютные выплаты не предоставляются.
+      additionalProperties: false
+      required:
+      - merchant_payout_reference
+      - amount_minor
+      - currency
+      - recipient
+      properties:
+        merchant_payout_reference:
+          type: string
+          minLength: 3
+          maxLength: 128
+          pattern: ^[A-Za-z][A-Za-z0-9]{0,31}[-_:][A-Za-z0-9][A-Za-z0-9._:-]{0,94}$
+          description: 'Уникальный номер выплаты в системе мерчанта. Например: payout-1001.'
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        currency:
+          type: string
+          description: Валюта списания с баланса проекта. Сейчас только RUB.
+          enum:
+          - RUB
+        recipient:
+          $ref: '#/components/schemas/CustomerPayoutRecipient'
+    PayoutEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - payout
+      properties:
+        payout:
+          $ref: '#/components/schemas/Payout'
+    CreateRecurringEnrollmentRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - payment_method
+      - merchant_mandate_reference
+      - customer_reference
+      properties:
+        payment_method:
+          type: string
+          enum:
+          - card
+          - sbp
+          description: 'Способ привязки реквизита: card или sbp. Доступность метода определяет PayHot.'
+          который плательщик привяжет на странице PayHot.: null
+        merchant_mandate_reference:
+          $ref: '#/components/schemas/RecurringOpaqueReference'
+        customer_reference:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Идентификатор плательщика в вашей системе. PayHot хранит только его защищённый отпечаток.
+    MerchantRecurringEnrollmentGrant:
+      type: object
+      additionalProperties: false
+      required:
+      - recurring_enrollment
+      example:
+        recurring_enrollment:
+          status: processing
+          currency: RUB
+          payment_method: card
+          merchant_mandate_reference: subscription-1001
+          expires_at: '2026-09-22T18:30:00Z'
+        checkout_url: /pay/75555555-5555-4555-8555-555555555555#token=phc_v2.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      properties:
+        recurring_enrollment:
+          $ref: '#/components/schemas/MerchantRecurringEnrollment'
+        checkout_url:
+          type: string
+          description: Одноразовая ссылка PayHot для подтверждения привязки. Сохраните ответ первого запроса.
+        reissue_required:
+          type: boolean
+          description: При повторе запроса одноразовая ссылка не возвращается; создайте новую ссылку привязки.
+    MandateEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - mandate
+      properties:
+        mandate:
+          $ref: '#/components/schemas/Mandate'
+      example:
+        mandate:
+          id: 33333333-3333-4333-8333-333333333333
+          merchant_mandate_reference: subscription-1001
+          payment_method: card
+          currency: RUB
+          status: active
+          display_mask: •••• 4242
+          activated_at: '2026-09-22T18:02:00Z'
+          created_at: '2026-09-22T18:00:00Z'
+          updated_at: '2026-09-22T18:02:00Z'
+    RevokeMandateRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+          enum:
+          - merchant_request
+          - consent_withdrawn
+          - instrument_replaced
+          - suspected_compromise
+    RevokeMandateResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - mandate
+      - already_revoked
+      properties:
+        mandate:
+          $ref: '#/components/schemas/Mandate'
+        already_revoked:
+          type: boolean
+    CreateRecurringChargeRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - merchant_recurring_charge_reference
+      - mandate_id
+      - amount_minor
+      - currency
+      - payment_method
+      properties:
+        merchant_recurring_charge_reference:
+          $ref: '#/components/schemas/RecurringOpaqueReference'
+        mandate_id:
+          $ref: '#/components/schemas/UUID'
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        currency:
+          type: string
+          enum:
+          - RUB
+          - USD
+          - EUR
+        payment_method:
+          type: string
+          enum:
+          - card
+          - sbp
+    RecurringChargeEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - recurring_charge
+      properties:
+        recurring_charge:
+          $ref: '#/components/schemas/RecurringCharge'
+    MerchantPaymentExportRow:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - merchant_order_reference
+      - flow_type
+      - payment_method
+      - amount_minor
+      - currency
+      - status
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        merchant_order_reference:
+          type: string
+        flow_type:
+          type: string
+        payment_method:
+          type: string
+        amount_minor:
+          type: string
+        currency:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        succeeded_at:
+          type: string
+          format: date-time
+    MerchantBalancePage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          minItems: 0
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/MerchantBalance'
+    PaymentPayinCombination:
+      type: object
+      description: Допустимые сочетания валюты и способа оплаты описаны в примерах запроса.
+      required:
+      - currency
+      - payment_method
+      properties:
+        currency:
+          type: string
+          enum:
+          - RUB
+          - USD
+          - EUR
+          - USDT.TRON
+        payment_method:
+          type: string
+          enum:
+          - sbp
+          - card
+          - sberpay
+          - crypto
+    PositiveInt64DecimalString:
+      type: string
+      minLength: 1
+      maxLength: 19
+      pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[01][0-9]{17}|92[01][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[01][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-7])$
+      description: Положительное целое число, переданное строкой.
+    MvpMoneyUnit:
+      type: string
+      enum:
+      - RUB
+      - USD
+      - EUR
+      - USDT.TRON
+    PaymentCryptoPreference:
+      type: object
+      additionalProperties: false
+      description: Необязательный выбор сети и монеты для оплаты RUB-заказа криптовалютой. Без него выбор делает плательщик.
+      required:
+      - network
+      properties:
+        network:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9._-]{1,63}$
+        asset:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9._-]{1,15}$
+    Payment:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - cash_desk
+      - merchant_order_reference
+      - amount_minor
+      - amount_denomination
+      - currency
+      - payment_method
+      - status
+      - created_at
+      - expires_at
+      allOf:
+      - $ref: '#/components/schemas/PaymentPayinCombination'
+      properties:
+        recurring_enrollment:
+          type: object
+          additionalProperties: false
+          description: Состояние привязки карты после первого платежа. Дождитесь active, затем используйте mandate_id для
+            повторных списаний.
+          required:
+          - status
+          properties:
+            status:
+              type: string
+              enum:
+              - pending
+              - active
+              - suspended
+              - revoked
+              - expired
+              - failed
+            mandate_id:
+              $ref: '#/components/schemas/UUID'
+        fees:
+          $ref: '#/components/schemas/MerchantPaymentFees'
+        id:
+          $ref: '#/components/schemas/UUID'
+        cash_desk:
+          $ref: '#/components/schemas/CashDeskIdentity'
+        merchant_order_reference:
+          type: string
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        amount_denomination:
+          $ref: '#/components/schemas/PaymentAmountDenomination'
+        currency:
+          $ref: '#/components/schemas/MvpMoneyUnit'
+        payment_method:
+          type: string
+        crypto:
+          $ref: '#/components/schemas/PaymentCryptoPreference'
+        status:
+          type: string
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        expires_at:
+          $ref: '#/components/schemas/DateTime'
+    CheckoutSessionGrantWithToken:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - path
+      - expires_at
+      - access_token
+      - one_time
+      properties:
+        public_id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        path:
+          type: string
+          minLength: 1
+        origin:
+          type: string
+          format: uri
+          description: Адрес Checkout для выданной ссылки.
+        expires_at:
+          $ref: '#/components/schemas/DateTime'
+        access_token:
+          type: string
+          minLength: 1
+          readOnly: true
+          description: 'Одноразовый токен Checkout. Передавайте его плательщику только во фрагменте ссылки после #; не отправляйте
+            в логи.'
+        one_time:
+          type: boolean
+          enum:
+          - true
+    CheckoutSessionReplay:
+      type: object
+      additionalProperties: false
+      required:
+      - access_token_available
+      - reissue_required
+      properties:
+        access_token_available:
+          type: boolean
+          enum:
+          - false
+        reissue_required:
+          type: boolean
+          enum:
+          - true
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/APIError'
+    UUID:
+      type: string
+      format: uuid
+      pattern: ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$
+    DirectSBPAction:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - hosted_checkout_required
+          - pending
+          - available
+          - expired
+        next_action:
+          $ref: '#/components/schemas/DirectSBPNextAction'
+    LowercaseUUID:
+      type: string
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+    CustomerPayoutRecipient:
+      type: object
+      additionalProperties: false
+      required:
+      - method
+      description: Выберите карту или СБП и передайте только реквизиты выбранного способа. Для карты обязательны card_number,
+        first_name, last_name, email и payeer_identifier. Для СБП обязательны phone, bank_id, card_holder и payeer_identifier.
+      properties:
+        method:
+          type: string
+          enum:
+          - card
+          - sbp
+          description: Способ выплаты.
+        card_number:
+          type: string
+          pattern: ^[0-9]{16}$
+          description: Номер карты для card.
+        phone:
+          type: string
+          description: 'Номер телефона для выплаты через СБП. Например: +79991234567.'
+        bank_id:
+          type: string
+          pattern: ^100[0-9]{9}$
+          description: Идентификатор банка для sbp.
+        payeer_identifier:
+          type: string
+          description: Идентификатор получателя для card или sbp.
+        first_name:
+          type: string
+          description: Имя получателя для card.
+        last_name:
+          type: string
+          description: Фамилия получателя для card.
+        email:
+          type: string
+          format: email
+          description: Email получателя для card.
+        card_holder:
+          type: string
+          description: Имя получателя для sbp.
+    Payout:
+      type: object
+      description: Публичное состояние выплаты. Внутренние этапы согласования и отправки объединены в status=processing.
+      additionalProperties: false
+      allOf:
+      - $ref: '#/components/schemas/MvpCurrencyProjection'
+      required:
+      - id
+      - merchant_payout_reference
+      - amount_minor
+      - currency
+      - money_unit_exponent
+      - payment_method
+      - status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        merchant_payout_reference:
+          type: string
+          minLength: 1
+          maxLength: 128
+        gross_amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        fee_amount_minor:
+          $ref: '#/components/schemas/AtomicAmountString'
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        currency:
+          $ref: '#/components/schemas/PayoutMoneyUnitCode'
+        money_unit_exponent:
+          type: integer
+          minimum: 0
+          maximum: 30
+        payment_method:
+          type: string
+          enum:
+          - card
+          - sbp
+          - bank_account
+          - crypto
+          description: Способ выплаты. Для новых выплат совпадает с recipient.method из запроса.
+        instrument_display_mask:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Безопасная маска реквизита получателя. Полные реквизиты не возвращаются.
+          если маску сформировать нельзя.: null
+        status:
+          $ref: '#/components/schemas/PublicPayoutStatus'
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+    RecurringOpaqueReference:
+      type: string
+      minLength: 3
+      maxLength: 128
+      pattern: ^[A-Za-z][A-Za-z0-9]{0,31}[-_:](?!(?:[^0-9]*[0-9]){12})(?!.*[A-Za-z0-9]{20})[A-Za-z0-9][A-Za-z0-9._:-]{0,94}$
+      description: Идентификатор без платёжных реквизитов для повторных операций.
+    MerchantRecurringEnrollment:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - currency
+      - payment_method
+      - merchant_mandate_reference
+      - expires_at
+      properties:
+        status:
+          type: string
+          enum:
+          - processing
+          - active
+          - failed
+          - expired
+          - cancelled
+          description: Текущее состояние привязки.
+        currency:
+          type: string
+          enum:
+          - RUB
+        payment_method:
+          type: string
+          enum:
+          - card
+          - sbp
+        merchant_mandate_reference:
+          $ref: '#/components/schemas/RecurringOpaqueReference'
+        payment_id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        display_mask:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Безопасная маска привязанного реквизита. Для карты видны только последние цифры, например •••• 4242.
+        mandate_id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        expires_at:
+          allOf:
+          - $ref: '#/components/schemas/DateTime'
+          description: 'Время, до которого можно открыть и подтвердить одноразовую ссылку. На срок действия созданной привязки
+            поле не влияет: она действует до отзыва.'
+    Mandate:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - merchant_mandate_reference
+      - payment_method
+      - currency
+      - status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        merchant_mandate_reference:
+          $ref: '#/components/schemas/RecurringOpaqueReference'
+        payment_method:
+          type: string
+          enum:
+          - card
+          - sbp
+        currency:
+          type: string
+          enum:
+          - RUB
+        status:
+          type: string
+          enum:
+          - active
+          - processing
+          - inactive
+          - revoked
+        display_mask:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Безопасная маска привязанного реквизита. Для карты видны только последние цифры.
+        activated_at:
+          $ref: '#/components/schemas/DateTime'
+        revoked_at:
+          $ref: '#/components/schemas/DateTime'
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+    RecurringCharge:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - merchant_recurring_charge_reference
+      - mandate_id
+      - amount_minor
+      - currency
+      - payment_method
+      - status
+      - created_at
+      - updated_at
+      properties:
+        fees:
+          $ref: '#/components/schemas/MerchantPaymentFees'
+        id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        merchant_recurring_charge_reference:
+          $ref: '#/components/schemas/RecurringOpaqueReference'
+        mandate_id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        amount_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        currency:
+          type: string
+          enum:
+          - RUB
+          - USD
+          - EUR
+        payment_method:
+          type: string
+          enum:
+          - card
+          - sbp
+        status:
+          type: string
+          enum:
+          - processing
+          - succeeded
+          - failed
+          - cancelled
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+    MerchantBalance:
+      type: object
+      additionalProperties: false
+      allOf:
+      - $ref: '#/components/schemas/MvpMoneyUnitCodeProjection'
+      required:
+      - money_unit_code
+      - money_unit_exponent
+      - available_minor
+      - frozen_minor
+      - debt_minor
+      - held_minor
+      - reserve_minor
+      - payout_payable_minor
+      - updated_at
+      properties:
+        money_unit_code:
+          $ref: '#/components/schemas/MvpMoneyUnit'
+        money_unit_exponent:
+          type: integer
+          minimum: 0
+          maximum: 30
+        available_minor:
+          type: string
+          pattern: ^(0|-?[1-9][0-9]{0,37})$
+          description: Доступно для операций проекта в минимальных единицах валюты.
+        frozen_minor:
+          $ref: '#/components/schemas/AtomicAmountString'
+        debt_minor:
+          $ref: '#/components/schemas/AtomicAmountString'
+        held_minor:
+          allOf:
+          - $ref: '#/components/schemas/AtomicAmountString'
+          description: Средства проекта на удержании в минимальных единицах валюты.
+        reserve_minor:
+          allOf:
+          - $ref: '#/components/schemas/AtomicAmountString'
+          description: Резерв проекта в минимальных единицах валюты.
+        payout_payable_minor:
+          allOf:
+          - $ref: '#/components/schemas/AtomicAmountString'
+          description: Средства, зарезервированные для выплат, в минимальных единицах валюты.
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+      description: Баланс текущего проекта по учтённым операциям.
+    MvpPayinCombination:
+      oneOf:
+      - type: object
+        required:
+        - currency
+        - payment_method
+        properties:
+          currency:
+            $ref: '#/components/schemas/FiatCurrency'
+          payment_method:
+            type: string
+            enum:
+            - sbp
+            - card
+            - sberpay
+      - type: object
+        required:
+        - currency
+        - payment_method
+        properties:
+          currency:
+            enum:
+            - USDT.TRON
+          payment_method:
+            enum:
+            - crypto
+    MerchantPaymentFees:
+      type: object
+      additionalProperties: false
+      required:
+      - principal_minor
+      - total_fee_minor
+      - merchant_fee_minor
+      - payer_fee_minor
+      - merchant_net_minor
+      description: Комиссии платежа в минимальных единицах валюты.
+      properties:
+        principal_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+        total_fee_minor:
+          type: string
+          pattern: ^(0|[1-9][0-9]*)$
+        merchant_fee_minor:
+          type: string
+          pattern: ^(0|[1-9][0-9]*)$
+        payer_fee_minor:
+          type: string
+          pattern: ^(0|[1-9][0-9]*)$
+        merchant_net_minor:
+          $ref: '#/components/schemas/PositiveInt64DecimalString'
+    CashDeskIdentity:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - display_name
+      description: Безопасный для мерчанта идентификатор кассы.
+      properties:
+        id:
+          $ref: '#/components/schemas/LowercaseUUID'
+        code:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: ^[a-z][a-z0-9_-]{2,63}$
+        display_name:
+          type: string
+          minLength: 2
+          maxLength: 160
+    PaymentAmountDenomination:
+      description: Валюта и масштаб суммы, указанной мерчантом.
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required:
+        - money_unit_code
+        - unit_kind
+        - exponent
+        properties:
+          money_unit_code:
+            $ref: '#/components/schemas/FiatCurrency'
+          unit_kind:
+            type: string
+            enum:
+            - fiat
+          exponent:
+            type: integer
+            enum:
+            - 2
+      - type: object
+        additionalProperties: false
+        required:
+        - money_unit_code
+        - unit_kind
+        - asset
+        - network
+        - exponent
+        properties:
+          money_unit_code:
+            type: string
+            enum:
+            - USDT.TRON
+          unit_kind:
+            type: string
+            enum:
+            - crypto
+          asset:
+            type: string
+            enum:
+            - USDT
+          network:
+            type: string
+            enum:
+            - TRON
+          exponent:
+            type: integer
+            enum:
+            - 6
+    DateTime:
+      type: string
+      format: date-time
+    APIError:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      - details
+      - request_id
+      - retryable
+      - action
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        details:
+          type: object
+          additionalProperties: true
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$
+        retryable:
+          type: boolean
+          description: Можно ли безопасно повторить запрос автоматически.
+        action:
+          type: string
+          enum:
+          - authenticate
+          - refresh
+          - retry_later
+          - correct_request
+          - check_request
+          - contact_support
+          description: Рекомендуемое действие для исправления ошибки без внутренних данных обработки.
+    DirectSBPNextAction:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - url
+      - expires_at
+      properties:
+        type:
+          type: string
+          enum:
+          - sbp_qr
+        url:
+          type: string
+          format: uri
+          maxLength: 4096
+          pattern: ^https://qr[.]nspk[.]ru/[A-Za-z0-9]+(?:[?][^#\s]*)?$
+          description: Ссылка СБП для оплаты созданного платежа. Её наличие ещё не подтверждает оплату.
+        expires_at:
+          $ref: '#/components/schemas/DateTime'
+    MvpCurrencyProjection:
+      oneOf:
+      - type: object
+        required:
+        - currency
+        - money_unit_exponent
+        properties:
+          currency:
+            $ref: '#/components/schemas/FiatCurrency'
+          money_unit_exponent:
+            enum:
+            - 2
+      - type: object
+        required:
+        - currency
+        - money_unit_exponent
+        properties:
+          currency:
+            enum:
+            - USDT.TRON
+          money_unit_exponent:
+            enum:
+            - 6
+    AtomicAmountString:
+      type: string
+      minLength: 1
+      maxLength: 38
+      pattern: ^(0|[1-9][0-9]{0,37})$
+      description: Неотрицательная сумма в минимальных единицах, переданная строкой.
+    PayoutMoneyUnitCode:
+      $ref: '#/components/schemas/MvpMoneyUnit'
+    PublicPayoutStatus:
+      type: string
+      enum:
+      - processing
+      - succeeded
+      - failed
+      - cancelled
+      description: processing означает, что PayHot принял выплату и выполняет необходимые внутренние этапы. Итоговые состояния
+        — succeeded, failed или cancelled.
+    MvpMoneyUnitCodeProjection:
+      oneOf:
+      - type: object
+        required:
+        - money_unit_code
+        - money_unit_exponent
+        properties:
+          money_unit_code:
+            $ref: '#/components/schemas/FiatCurrency'
+          money_unit_exponent:
+            enum:
+            - 2
+      - type: object
+        required:
+        - money_unit_code
+        - money_unit_exponent
+        properties:
+          money_unit_code:
+            enum:
+            - USDT.TRON
+          money_unit_exponent:
+            enum:
+            - 6
+    FiatCurrency:
+      type: string
+      enum:
+      - RUB
+      - USD
+      - EUR
+  headers:
+    RequestID:
+      description: Идентификатор запроса для обращения в поддержку PayHot.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$
+    RetryAfter:
+      description: Минимальная задержка перед повтором в секундах.
+      schema:
+        type: string
+        pattern: ^[0-9]+$
+  responses:
+    ErrorResponse:
+      description: Ошибка с кодом и пояснением.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    MerchantAuthenticationError:
+      description: API-ключ отсутствует, недействителен или истёк.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+        WWW-Authenticate:
+          schema:
+            type: string
+            enum:
+            - Bearer realm="payhot-v2"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RetryableError:
+      description: Временная ошибка операции или зависимого сервиса.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    PaymentLifecycleUnprocessableError:
+      description: Операция не может быть выполнена в текущем состоянии платежа.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+        Idempotency-Replayed:
+          description: Повтор уже сохранённого результата операции.
+          schema:
+            type: string
+            enum:
+            - 'true'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    PayoutCreationConflictError:
+      description: Недостаточно доступных средств или конфликт номера, состояния либо ключа повтора.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+        Retry-After:
+          description: Время ожидания перед повтором при обработке запроса с тем же ключом.
+          schema:
+            type: string
+            enum:
+            - '1'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
