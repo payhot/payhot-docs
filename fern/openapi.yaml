@@ -1444,34 +1444,43 @@ components:
       - updated_at
       properties:
         money_unit_code:
-          $ref: '#/components/schemas/MvpMoneyUnit'
+          allOf:
+          - $ref: '#/components/schemas/MvpMoneyUnit'
+          description: Валюта этого баланса. Для каждой валюты в ответе возвращается отдельный объект.
         money_unit_exponent:
           type: integer
           minimum: 0
           maximum: 30
+          description: Количество знаков после запятой. Чтобы получить обычную сумму, разделите любое поле `*_minor` на 10 в этой степени. Например, для RUB значение 2 означает, что `12345` равно 123,45 RUB; для USDT.TRON значение 6 означает, что `1234567` равно 1,234567 USDT.
         available_minor:
           type: string
           pattern: ^(0|-?[1-9][0-9]{0,37})$
-          description: Доступно для операций проекта в минимальных единицах валюты.
+          description: Сумма, которой проект может распоряжаться сейчас. Используется для новых выплат и других разрешённых операций. Если из-за отдельно согласованного технического овердрафта значение стало отрицательным, размер задолженности дополнительно указан в `debt_minor`.
         frozen_minor:
-          $ref: '#/components/schemas/AtomicAmountString'
+          allOf:
+          - $ref: '#/components/schemas/AtomicAmountString'
+          description: Сумма, временно заблокированная PayHot по административному ограничению. Она не входит в доступный баланс и вернётся в `available_minor` после снятия ограничения.
         debt_minor:
-          $ref: '#/components/schemas/AtomicAmountString'
+          allOf:
+          - $ref: '#/components/schemas/AtomicAmountString'
+          description: Текущая задолженность проекта, возникшая только при отдельно согласованном техническом овердрафте. Эта сумма не доступна для выплат; значение `0` означает отсутствие задолженности.
         held_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Средства проекта на удержании в минимальных единицах валюты.
+          description: Сумма успешных платежей, которая ещё находится на временном удержании по условиям расчётов. После окончания удержания PayHot переводит её в `available_minor`, если нет другого ограничения.
         reserve_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Резерв проекта в минимальных единицах валюты.
+          description: Сумма обеспечительного резерва проекта. Она отделена от доступного баланса и освобождается по действующим условиям резервирования.
         payout_payable_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Средства, зарезервированные для выплат, в минимальных единицах валюты.
+          description: Сумма, уже зарезервированная под созданные выплаты. Пока выплата обрабатывается, эти деньги нельзя использовать повторно; при отмене или окончательной ошибке резерв возвращается в `available_minor`, а при успехе списывается окончательно.
         updated_at:
-          $ref: '#/components/schemas/DateTime'
-      description: Баланс текущего проекта по учтённым операциям.
+          allOf:
+          - $ref: '#/components/schemas/DateTime'
+          description: Время последнего изменения любого из балансов этого объекта.
+      description: Балансы текущего проекта по одной валюте. Все суммы передаются целыми строками в минимальных единицах. Используйте `money_unit_exponent`, чтобы показать обычную сумму. Поля отражают только подтверждённые операции PayHot; балансы провайдеров используются отдельно для сверки.
     MvpPayinCombination:
       oneOf:
       - type: object

@@ -9,18 +9,22 @@
     ["View as Markdown", "Открыть в Markdown"],
     ["More actions", "Ещё"],
     ["On this page", "На этой странице"],
+    ["Authentication", "Авторизация"],
     ["Light", "Светлая тема"],
     ["Dark", "Тёмная тема"],
     ["System", "Как в системе"],
     ["Server URL", "Адрес сервера"],
     ["Headers", "Заголовки"],
     ["Path Parameters", "Параметры пути"],
+    ["Path parameters", "Параметры пути"],
     ["Query Parameters", "Параметры запроса"],
+    ["Query parameters", "Параметры запроса"],
     ["Request", "Запрос"],
     ["Request Body", "Тело запроса"],
     ["Response", "Ответ"],
     ["Responses", "Ответы"],
     ["Response Body", "Тело ответа"],
+    ["Response headers", "Заголовки ответа"],
     ["Example", "Пример"],
     ["Examples", "Примеры"],
     ["Send", "Отправить"],
@@ -29,6 +33,14 @@
     ["Opens the API Explorer", "Открывает API Explorer"],
     ["Deprecated", "Устарело"],
     ["Successful", "Успешно"],
+    ["Allowed values:", "Допустимые значения:"],
+    ["Errors", "Ошибки"],
+    ["Was this page helpful?", "Страница была полезной?"],
+    ["Yes", "Да"],
+    ["No", "Нет"],
+    ["Previous", "Назад"],
+    ["Next", "Далее"],
+    ["Built with", "Работает на"],
     ["Required", "Обязательно"],
     ["Optional", "Необязательно"],
     ["This endpoint expects an object.", "Передайте объект JSON."],
@@ -63,8 +75,11 @@
 
     const source = node.nodeValue;
     const trimmed = source.trim();
-    const translated = translations.get(trimmed);
-    if (!translated) return;
+    const translated = translations.get(trimmed) ||
+      trimmed.replace(/^Show (\d+) properties$/, "Показать свойства: $1")
+        .replace(/^Hide (\d+) properties$/, "Скрыть свойства: $1")
+        .replace(/^(\d+)-(\d+) characters$/, "$1–$2 символов");
+    if (!translated || translated === trimmed) return;
 
     node.nodeValue = source.replace(trimmed, translated);
   };
