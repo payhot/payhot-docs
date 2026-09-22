@@ -5,6 +5,11 @@ instances:
     custom-domain: docs.pay.hot
 
 title: PayHot API
+
+translations:
+  - lang: ru
+    default: true
+
 default-language: curl
 
 layout:
