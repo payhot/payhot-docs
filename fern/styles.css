@@ -16,9 +16,10 @@
   --ph-ink-soft: #52617a;
   --ph-border: #d7e0e9;
   --ph-brand: #f61833;
-  --ph-brand-strong: #e70736;
+  --ph-brand-strong: #da102c;
+  --ph-brand-hover: #da102c;
   --ph-brand-soft: #ffe7ec;
-  --ph-brand-gradient: linear-gradient(180deg, #e70736 0%, #c90036 100%);
+  --ph-brand-gradient: #f61833;
   --ph-shadow-panel: 0 18px 48px rgb(45 63 84 / 7%);
   --ph-shadow-brand: 0 8px 20px rgb(246 24 51 / 22%);
   --ph-radius-control: 14px;
@@ -158,8 +159,45 @@ pre {
 
 .fern-button.filled.primary:hover,
 .fern-explorer-send-request-button:hover {
-  filter: brightness(0.96);
+  background: var(--ph-brand-hover) !important;
+  filter: none;
   box-shadow: 0 10px 26px rgb(246 24 51 / 28%);
+}
+
+#fern-ask-ai-button {
+  color: #ffffff !important;
+  background: var(--ph-brand) !important;
+  border-color: var(--ph-brand) !important;
+  box-shadow: var(--ph-shadow-brand);
+}
+
+#fern-ask-ai-button:hover {
+  color: #ffffff !important;
+  background: var(--ph-brand-hover) !important;
+  border-color: var(--ph-brand-hover) !important;
+  box-shadow: 0 10px 26px rgb(246 24 51 / 28%);
+}
+
+#fern-ask-ai-button svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+[id^="playground-button:"] {
+  color: #ffffff !important;
+  background: var(--ph-brand) !important;
+  box-shadow: 0 6px 16px rgb(246 24 51 / 24%);
+}
+
+[id^="playground-button:"]:hover {
+  color: #ffffff !important;
+  background: var(--ph-brand-hover) !important;
+}
+
+#fern-ask-ai-button:focus-visible,
+[id^="playground-button:"]:focus-visible {
+  outline: 3px solid rgb(246 24 51 / 30%) !important;
+  outline-offset: 2px;
 }
 
 .fern-page-actions,
@@ -214,6 +252,12 @@ pre {
   letter-spacing: 0.02em;
 }
 
+.fern-docs-badge[data-badge-type="availability"] {
+  color: #ffffff !important;
+  background: var(--ph-brand) !important;
+  border-color: transparent !important;
+}
+
 .fern-filter-badge.fern-filter-badge-selected {
   color: #ffffff;
   background: var(--ph-brand-gradient);
@@ -234,6 +278,7 @@ pre {
   --ph-ink: #ffffff;
   --ph-ink-soft: #b6c0ce;
   --ph-border: #323842;
+  --ph-brand-strong: #ff2340;
   --ph-brand-soft: rgb(246 24 51 / 16%);
   --ph-shadow-panel: 0 18px 48px rgb(0 0 0 / 18%);
 }
@@ -262,14 +307,14 @@ pre {
 }
 
 .dark .fern-sidebar-link[data-state="active"] {
-  color: #ff8391 !important;
+  color: var(--ph-brand) !important;
   background: rgb(246 24 51 / 12%) !important;
 }
 
 .dark .fern-sidebar-link[data-state="active"] .fern-sidebar-link-title,
 .dark .fern-sidebar-link[data-state="active"] .fern-sidebar-link-title-inner,
 .dark .fern-sidebar-link[data-state="active"] svg {
-  color: #ff8391 !important;
+  color: var(--ph-brand) !important;
 }
 
 .dark .fern-page-heading,

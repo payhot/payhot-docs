@@ -1,10 +1,5 @@
-# PayHot API documentation
+# Документация API PayHot
 
-Публичная документация PayHot на Fern.
+Официальная документация по интеграции с API PayHot.
 
-- Fern Dashboard публикует изменения из ветки `main`.
-- Конфигурация находится в `fern/docs.yml`.
-- Публичная OpenAPI-спецификация находится в `fern/openapi.yaml`.
-- Локальная проверка: `fern check`.
-
-Документация публикуется на `https://docs.pay.hot`.
+[Открыть документацию](https://docs.pay.hot)
