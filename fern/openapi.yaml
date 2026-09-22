@@ -1004,6 +1004,7 @@ components:
           type: array
           minItems: 0
           maxItems: 4
+          description: Балансы проекта. Для каждой валюты возвращается отдельный объект с доступной суммой, удержаниями, резервом, задолженностью и суммой в обработке по выплатам.
           items:
             $ref: '#/components/schemas/MerchantBalance'
     PaymentPayinCombination:
