@@ -25,12 +25,17 @@
   --ph-radius-panel: 22px;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: var(--font-body);
   color: var(--ph-ink);
   background:
     radial-gradient(circle at 50% -12rem, rgb(202 205 218 / 72%), transparent 31rem),
     var(--ph-page);
+  transition: color 180ms ease-out, background-color 180ms ease-out;
 }
 
 h1,
@@ -53,11 +58,14 @@ pre {
   background: rgb(240 244 248 / 82%);
   box-shadow: 0 8px 28px rgb(45 63 84 / 5%);
   backdrop-filter: blur(18px);
+  transition: background-color 180ms ease-out, border-color 180ms ease-out,
+    box-shadow 180ms ease-out;
 }
 
 #fern-sidebar {
   background: rgb(240 244 248 / 94%);
   border-right-color: rgb(200 211 223 / 55%);
+  transition: background-color 180ms ease-out, border-color 180ms ease-out;
 }
 
 .fern-sidebar-heading-content {
@@ -70,43 +78,55 @@ pre {
 
 .fern-sidebar-link {
   min-height: 2.5rem;
+  border: 0 !important;
   border-radius: 12px;
-  transition: color 140ms ease, background-color 140ms ease, box-shadow 140ms ease,
-    transform 140ms ease;
+  margin-left: 0 !important;
+  transition: color 180ms ease-out, background-color 180ms ease-out,
+    box-shadow 180ms ease-out;
 }
 
 .fern-sidebar-link:hover {
   background: rgb(255 255 255 / 82%);
   box-shadow: 0 6px 18px rgb(45 63 84 / 6%);
-  transform: translateY(-1px);
 }
 
 .fern-sidebar-link[data-state="active"] {
-  color: #ffffff !important;
-  background: var(--ph-brand-gradient) !important;
-  box-shadow: var(--ph-shadow-brand);
+  color: var(--ph-brand-strong) !important;
+  background: rgb(246 24 51 / 8%) !important;
+  box-shadow: none;
   font-weight: 650;
 }
 
-.fern-sidebar-link[data-state="active"] * {
-  color: inherit !important;
+.fern-sidebar-link[data-state="active"] .fern-sidebar-link-title,
+.fern-sidebar-link[data-state="active"] .fern-sidebar-link-title-inner,
+.fern-sidebar-link[data-state="active"] svg {
+  color: var(--ph-brand-strong) !important;
+  -webkit-text-stroke: 0 !important;
 }
 
-.fern-sidebar-link.nested[data-state="active"] {
-  margin-left: 0;
-  border-left-width: 0;
-  border-color: transparent;
+.fern-sidebar-link.nested {
+  position: relative;
+}
+
+.fern-sidebar-link.nested::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: -7px;
+  display: block !important;
+  width: 3px !important;
+  content: "" !important;
+  border-radius: 999px;
+  background: var(--ph-brand-gradient) !important;
+  opacity: 0;
+  transform: scaleY(0.45);
+  transform-origin: center;
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
 }
 
 .fern-sidebar-link.nested[data-state="active"]::before {
-  display: none;
-  content: none;
-}
-
-.fern-sidebar-link[data-state="active"] .fern-docs-badge[data-badge-type="http-method"] {
-  color: #ffffff !important;
-  background: rgb(255 255 255 / 18%) !important;
-  border-color: rgb(255 255 255 / 24%) !important;
+  opacity: 1;
+  transform: scaleY(1);
 }
 
 .fern-page-heading {
@@ -124,6 +144,8 @@ pre {
   border-radius: var(--ph-radius-control);
   font-family: var(--font-body);
   font-weight: 650;
+  transition: color 180ms ease-out, background-color 180ms ease-out,
+    border-color 180ms ease-out, box-shadow 180ms ease-out, filter 180ms ease-out;
 }
 
 .fern-button.filled.primary,
@@ -134,6 +156,12 @@ pre {
   box-shadow: var(--ph-shadow-brand);
 }
 
+.fern-button.filled.primary:hover,
+.fern-explorer-send-request-button:hover {
+  filter: brightness(0.96);
+  box-shadow: 0 10px 26px rgb(246 24 51 / 28%);
+}
+
 .fern-page-actions,
 .fern-code-block,
 .fern-code-group,
@@ -141,6 +169,8 @@ pre {
 .fern-explorer-response-card,
 .fern-endpoint-code-snippets {
   border-radius: 18px;
+  transition: border-color 180ms ease-out, background-color 180ms ease-out,
+    box-shadow 180ms ease-out;
 }
 
 .fern-callout,
@@ -148,6 +178,8 @@ pre {
 .fern-collapsible-card {
   border-radius: var(--ph-radius-panel);
   box-shadow: var(--ph-shadow-panel);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out,
+    box-shadow 180ms ease-out;
 }
 
 .fern-api-property {
@@ -157,6 +189,13 @@ pre {
   border-radius: 16px;
   background: rgb(255 255 255 / 72%);
   box-shadow: 0 8px 24px rgb(45 63 84 / 4%);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+.fern-api-property:hover {
+  border-color: rgb(246 24 51 / 22%);
+  box-shadow: 0 10px 28px rgb(45 63 84 / 7%);
 }
 
 .fern-api-property-key {
@@ -222,6 +261,17 @@ pre {
   box-shadow: none;
 }
 
+.dark .fern-sidebar-link[data-state="active"] {
+  color: #ff8391 !important;
+  background: rgb(246 24 51 / 12%) !important;
+}
+
+.dark .fern-sidebar-link[data-state="active"] .fern-sidebar-link-title,
+.dark .fern-sidebar-link[data-state="active"] .fern-sidebar-link-title-inner,
+.dark .fern-sidebar-link[data-state="active"] svg {
+  color: #ff8391 !important;
+}
+
 .dark .fern-page-heading,
 .dark .fern-api-property-key {
   color: #ffffff;
@@ -233,6 +283,11 @@ pre {
   box-shadow: var(--ph-shadow-panel);
 }
 
+.dark .fern-api-property:hover {
+  border-color: rgb(255 131 145 / 26%);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 22%);
+}
+
 @media (max-width: 767px) {
   .fern-api-property {
     padding: 0.875rem;
@@ -241,7 +296,12 @@ pre {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fern-sidebar-link {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

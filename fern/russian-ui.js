@@ -1,4 +1,6 @@
 (() => {
+  document.documentElement.lang = "ru";
+
   const translations = new Map([
     ["Search", "Поиск"],
     ["Search documentation", "Поиск по документации"],
@@ -86,7 +88,6 @@
   };
 
   const start = () => {
-    document.documentElement.lang = "ru";
     translateTree(document.body);
 
     new MutationObserver((records) => {
