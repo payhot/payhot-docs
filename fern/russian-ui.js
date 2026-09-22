@@ -33,7 +33,10 @@
     ["Opens the API Explorer", "Открывает API Explorer"],
     ["Deprecated", "Устарело"],
     ["Successful", "Успешно"],
+    ["Retrieved", "Получено"],
+    ["Allowed values", "Допустимые значения"],
     ["Allowed values:", "Допустимые значения:"],
+    ["list of objects", "список объектов"],
     ["Errors", "Ошибки"],
     ["Was this page helpful?", "Страница была полезной?"],
     ["Yes", "Да"],
@@ -111,11 +114,14 @@
     document.documentElement.lang = "ru";
     translateTree(document.body);
 
-    new MutationObserver((records) => {
-      for (const record of records) {
-        if (record.type === "characterData") translateTextNode(record.target);
-        record.addedNodes.forEach(translateTree);
-      }
+    let translationScheduled = false;
+    new MutationObserver(() => {
+      if (translationScheduled) return;
+      translationScheduled = true;
+      window.setTimeout(() => {
+        translationScheduled = false;
+        translateTree(document.body);
+      });
     }).observe(document.body, { childList: true, subtree: true, characterData: true });
   };
 
