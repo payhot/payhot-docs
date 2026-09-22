@@ -49,10 +49,12 @@ colors:
     dark: "#FF8391"
     light: "#A60031"
   background:
-    dark: "#111216"
-    light: "#F3F7FC"
+    dark: "#15171B"
+    light: "#F0F4F8"
 
 theme:
+  sidebar: minimal
+  body: canvas
   page-actions: toolbar
   footer-nav: minimal
 
@@ -66,28 +68,31 @@ favicon: docs/assets/favicon.svg
 css: styles.css
 
 redirects:
-  - source: /overview
-    destination: /api
+  - source: /api
+    destination: /overview
   - source: /api-reference
-    destination: /api
+    destination: /overview
   - source: /first-payment
-    destination: /api
+    destination: /overview
   - source: /payouts
-    destination: /api
+    destination: /overview
   - source: /recurring
-    destination: /api
+    destination: /overview
   - source: /errors-and-retries
-    destination: /api
+    destination: /overview
   - source: /support
-    destination: /api
+    destination: /overview
   - source: /api/справочник-api/payments
-    destination: /api
+    destination: /overview
   - source: /api/справочник-api/payouts
-    destination: /api
+    destination: /overview
   - source: /api/справочник-api/recurring
-    destination: /api
+    destination: /overview
   - source: /api/справочник-api/balances
-    destination: /api
+    destination: /overview
 
 metadata:
   og:dynamic: true
+  og:locale: ru_RU
+  og:title: PayHot API
+  og:description: Публичная документация API PayHot для платежей, выплат, повторных списаний и баланса проекта.
