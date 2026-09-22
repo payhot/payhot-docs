@@ -92,6 +92,23 @@ pre {
   color: inherit !important;
 }
 
+.fern-sidebar-link.nested[data-state="active"] {
+  margin-left: 0;
+  border-left-width: 0;
+  border-color: transparent;
+}
+
+.fern-sidebar-link.nested[data-state="active"]::before {
+  display: none;
+  content: none;
+}
+
+.fern-sidebar-link[data-state="active"] .fern-docs-badge[data-badge-type="http-method"] {
+  color: #ffffff !important;
+  background: rgb(255 255 255 / 18%) !important;
+  border-color: rgb(255 255 255 / 24%) !important;
+}
+
 .fern-page-heading {
   color: var(--ph-ink);
   font-weight: 750;
