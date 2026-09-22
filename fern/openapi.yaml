@@ -7,14 +7,18 @@ servers:
 - url: https://app.pay.hot
   x-fern-server-name: Production
 tags:
-- name: Платежи
+- name: payments
   description: Создание платежей и проверка их состояния.
-- name: Выплаты
+  x-displayName: Платежи
+- name: payouts
   description: Создание выплат и проверка их состояния.
-- name: Повторные платежи
+  x-displayName: Выплаты
+- name: recurring
   description: Привязка способа оплаты и повторные списания.
-- name: Балансы
+  x-displayName: Повторные платежи
+- name: balances
   description: Баланс проекта.
+  x-displayName: Балансы
 paths:
   /api/v2/payments:
     post:
@@ -23,7 +27,7 @@ paths:
       description: Создаёт платёж и одноразовую ссылку Checkout PayHot. Касса определяется API-ключом. Повтор с тем же Idempotency-Key
         возвращает результат исходного запроса.
       tags:
-      - Платежи
+      - payments
       security:
       - MerchantBearer: []
       parameters:
@@ -132,7 +136,7 @@ paths:
       description: Возвращает текущее состояние платежа, созданного для проекта и кассы этого API-ключа. Итог подтверждайте
         статусом или подписанным вебхуком.
       tags:
-      - Платежи
+      - payments
       security:
       - MerchantBearer: []
       responses:
@@ -163,7 +167,7 @@ paths:
         pending — ссылку ещё готовят, available — ссылка готова до expires_at, expired — срок истёк. available не подтверждает
         оплату; итог проверяйте по статусу платежа или вебхуку.
       tags:
-      - Платежи
+      - payments
       security:
       - MerchantBearer: []
       responses:
@@ -191,7 +195,7 @@ paths:
       description: Создание возврата через API мерчанта пока недоступно. Возврат средств выполняется через менеджеров PayHot.
         Адрес возвращает 403 без создания операции.
       tags:
-      - Платежи
+      - payments
       security:
       - MerchantBearer: []
       parameters:
@@ -226,7 +230,7 @@ paths:
       description: Создаёт выплату с рублёвого баланса проекта. Сумма указывается в копейках RUB, реквизиты карты или СБП
         передаются только в этом запросе. Криптовалютные выплаты пока недоступны. Повторяйте запрос с тем же Idempotency-Key.
       tags:
-      - Выплаты
+      - payouts
       security:
       - MerchantBearer: []
       parameters:
@@ -301,7 +305,7 @@ paths:
       summary: Получить статус выплаты
       description: Показывает состояние выплаты проекта без полного номера карты и других реквизитов получателя.
       tags:
-      - Выплаты
+      - payouts
       security:
       - MerchantBearer: []
       responses:
@@ -329,7 +333,7 @@ paths:
         подтверждения PayHot активирует бессрочное разрешение и вернёт mandate_id. Привязка действует до отзыва. Внутренний
         сценарий работы с провайдером выбирает PayHot.
       tags:
-      - Повторные платежи
+      - recurring
       security:
       - MerchantBearer: []
       parameters:
@@ -403,7 +407,7 @@ paths:
       summary: Получить статус привязки
       description: Показывает состояние разрешения на повторные списания по проекту. Полные реквизиты плательщика не возвращаются.
       tags:
-      - Повторные платежи
+      - recurring
       security:
       - MerchantBearer: []
       responses:
@@ -429,7 +433,7 @@ paths:
       summary: Отключить повторные списания
       description: Отзывает разрешение плательщика на будущие списания. Повтор с тем же запросом безопасен.
       tags:
-      - Повторные платежи
+      - recurring
       security:
       - MerchantBearer: []
       requestBody:
@@ -466,7 +470,7 @@ paths:
       description: Принимает одно списание по действующему разрешению плательщика. Ответ 202 означает постановку в обработку,
         а не успешную оплату; итог проверяйте отдельно.
       tags:
-      - Повторные платежи
+      - recurring
       security:
       - MerchantBearer: []
       parameters:
@@ -516,7 +520,7 @@ paths:
       operationId: getRecurringCharge
       summary: Получить повторное списание
       tags:
-      - Повторные платежи
+      - recurring
       security:
       - MerchantBearer: []
       responses:
@@ -541,7 +545,7 @@ paths:
       summary: Выгрузить платежи
       description: Выгружает платежи проекта за период до 31 дня в CSV, Excel или JSON. Максимум 10 000 строк.
       tags:
-      - Платежи
+      - payments
       security:
       - MerchantBearer: []
       parameters:
@@ -606,7 +610,7 @@ paths:
       description: Возвращает доступный, удержанный и резервный баланс проекта, к которому привязан API-ключ. Суммы указаны
         в минимальных единицах каждой валюты.
       tags:
-      - Балансы
+      - balances
       security:
       - MerchantBearer: []
       responses:
