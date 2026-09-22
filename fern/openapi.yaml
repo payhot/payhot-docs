@@ -607,8 +607,8 @@ paths:
     get:
       operationId: listMerchantAPIBalances
       summary: Получить баланс
-      description: Возвращает доступный, удержанный и резервный баланс проекта, к которому привязан API-ключ. Суммы указаны
-        в минимальных единицах каждой валюты.
+      description: Возвращает балансы проекта по валютам. Все суммы указаны в минимальных единицах; правило перевода в обычную
+        сумму приведено в `money_unit_exponent`.
       tags:
       - balances
       security:
@@ -1004,7 +1004,7 @@ components:
           type: array
           minItems: 0
           maxItems: 4
-          description: Балансы проекта. Для каждой валюты возвращается отдельный объект с доступной суммой, удержаниями, резервом, задолженностью и суммой в обработке по выплатам.
+          description: Балансы проекта по валютам.
           items:
             $ref: '#/components/schemas/MerchantBalance'
     PaymentPayinCombination:
@@ -1447,7 +1447,7 @@ components:
         money_unit_code:
           allOf:
           - $ref: '#/components/schemas/MvpMoneyUnit'
-          description: Валюта этого баланса. Для каждой валюты в ответе возвращается отдельный объект.
+          description: Валюта баланса. Для каждой валюты возвращается отдельный объект.
         money_unit_exponent:
           type: integer
           minimum: 0
@@ -1456,32 +1456,32 @@ components:
         available_minor:
           type: string
           pattern: ^(0|-?[1-9][0-9]{0,37})$
-          description: Сумма, которой проект может распоряжаться сейчас. Используется для новых выплат и других разрешённых операций. Если из-за отдельно согласованного технического овердрафта значение стало отрицательным, размер задолженности дополнительно указан в `debt_minor`.
+          description: Сумма, доступная для операций.
         frozen_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Сумма, временно заблокированная PayHot по административному ограничению. Она не входит в доступный баланс и вернётся в `available_minor` после снятия ограничения.
+          description: Заблокированная сумма.
         debt_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Текущая задолженность проекта, возникшая только при отдельно согласованном техническом овердрафте. Эта сумма не доступна для выплат; значение `0` означает отсутствие задолженности.
+          description: Сумма задолженности.
         held_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Сумма успешных платежей, которая ещё находится на временном удержании по условиям расчётов. После окончания удержания PayHot переводит её в `available_minor`, если нет другого ограничения.
+          description: Сумма на удержании.
         reserve_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Сумма обеспечительного резерва проекта. Она отделена от доступного баланса и освобождается по действующим условиям резервирования.
+          description: Сумма в резерве.
         payout_payable_minor:
           allOf:
           - $ref: '#/components/schemas/AtomicAmountString'
-          description: Сумма, уже зарезервированная под созданные выплаты. Пока выплата обрабатывается, эти деньги нельзя использовать повторно; при отмене или окончательной ошибке резерв возвращается в `available_minor`, а при успехе списывается окончательно.
+          description: Сумма, зарезервированная под выплаты в обработке.
         updated_at:
           allOf:
           - $ref: '#/components/schemas/DateTime'
-          description: Время последнего изменения любого из балансов этого объекта.
-      description: Балансы текущего проекта по одной валюте. Все суммы передаются целыми строками в минимальных единицах. Используйте `money_unit_exponent`, чтобы показать обычную сумму. Поля отражают только подтверждённые операции PayHot; балансы провайдеров используются отдельно для сверки.
+          description: Дата и время последнего обновления баланса.
+      description: Баланс проекта по одной валюте. Все суммы передаются целыми строками в минимальных единицах. Для отображения обычной суммы используйте `money_unit_exponent`.
     MvpPayinCombination:
       oneOf:
       - type: object
